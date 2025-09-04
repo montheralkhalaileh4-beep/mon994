@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تسجيل الطالب</title>
+<style>
+  body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f2f8ff;
+    margin: 0;
+    padding: 0;
+    direction: rtl;
+  }
+  .container { width: 100%; max-width: 1000px; margin: auto; padding: 20px; }
+
+  /* تصميم النموذج */
+  .form-container {
+    background-color: #ffe4b5; padding: 20px; border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+  .form-container h2 { text-align: center; color: #4CAF50; }
+  label { font-size: 18px; color: #333; margin-top: 10px; display:block; }
+  input[type="text"] {
+    width: 100%; padding: 10px; margin: 10px 0;
+    border-radius: 5px; border: 1px solid #ddd;
+  }
+  button {
+    width: 100%; padding: 15px; background-color: #4CAF50; color: white;
+    border: none; border-radius: 5px; font-size: 18px; cursor: pointer;
+  }
+  button:hover { background-color: #45a049; }
+
+  /* واجهة المعلومات */
+  .student-info {
+    background-color: #fff; padding: 20px; border-radius: 10px; margin-top: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+  .student-info h3 { color: #4CAF50; margin-top:0; }
+
+  .menu { margin-top: 20px; list-style-type: none; padding: 0; }
+  .menu li {
+    background-color: #ffcccb; padding: 12px; margin-bottom: 8px;
+    border-radius: 5px; cursor: pointer; text-align: center; font-size: 18px;
+  }
+  .menu li:hover { background-color: #ff7f7f; }
+
+  /* تصميم قائمة الدروس */
+  .lesson-list { list-style-type: none; padding: 0; }
+  .lesson-list li {
+    background-color: #b3e6b3; margin-bottom: 10px; padding: 10px;
+    border-radius: 5px; cursor: pointer; text-align: center; font-size: 16px;
+  }
+  .lesson-list li:hover { background-color: #99cc99; }
+
+  .pdf-container, .quiz-container, .results-container {
+    display: none; margin-top: 20px; background-color: #fff;
+    padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+  iframe { width: 100%; height: 500px; border: none; }
+
+  /* الاختبار */
+  .question { margin-bottom: 18px; }
+  .question h4 { margin: 0 0 8px; color:#333; font-size:18px; }
+  .options label { display:block; margin-bottom:6px; cursor:pointer; }
+  .section-title { margin: 24px 0 12px; font-size:20px; color:#2f6f3e; border-bottom:2px solid #e5f3ea; padding-bottom:6px; }
+  .muted { color:#666; font-size:14px; }
+
+  /* النتائج */
+  .result-ok { color:#0b7a28; font-weight:bold; }
+  .result-bad { color:#c0392b; font-weight:bold; }
+  .answer-block {
+    background:#f8fbff; border:1px solid #e3eefc; border-radius:8px; padding:10px; margin:8px 0;
+  }
+  .answer-block .correct { color:#0b7a28; }
+  .answer-block .wrong { color:#c0392b; }
+
+  .btn-row { display:flex; gap:10px; flex-wrap:wrap; }
+  .btn-secondary { background:#008CBA; }
+  .btn-outline { background:transparent; color:#4CAF50; border:1px solid #4CAF50; }
+  .btn-outline:hover { background:#4CAF50; color:#fff; }
+
+  /* أقسام التقييم */
+  .eval-card {
+    background:#fffdf5; border:1px solid #ffe6a7; border-radius:10px; padding:12px; margin-top:12px;
+  }
+  .eval-title { font-weight:bold; margin-bottom:6px; color:#6b4f00; }
+  .rec-list { margin: 0; padding-right: 18px; }
+  .rec-list li { margin: 6px 0; }
+  .pill {
+    display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; margin-left:6px;
+    background:#eef; border:1px solid #ccd;
+  }
+
+  /* الطباعة لتوليد PDF */
+  @media print{
+    .no-print{display:none !important}
+    body{background:#fff}
+    .container{max-width:100%;padding:0}
+    .results-container{box-shadow:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- نموذج تسجيل الطالب -->
+  <div class="form-container">
+    <h2>تسجيل الطالب</h2>
+    <form id="student-form">
+      <label for="name">اسم الطالب:</label>
+      <input type="text" id="name" name="name" placeholder="أدخل اسم الطالب" required>
+
+      <label for="grade">الصف:</label>
+      <input type="text" id="grade" name="grade" placeholder="أدخل الصف" required>
+
+      <label for="section">الشعبة:</label>
+      <input type="text" id="section" name="section" placeholder="أدخل الشعبة" required>
+
+      <button type="submit">تسجيل</button>
+    </form>
+  </div>
+
+  <!-- عرض اسم الطالب و تفاصيله بعد التسجيل -->
+  <div class="student-info" id="student-info" style="display: none;">
+    <h3>مرحبًا <span id="student-name"></span></h3>
+    <p>الصف: <span id="student-grade"></span></p>
+    <p>الشعبة: <span id="student-section"></span></p>
+
+    <!-- قائمة الوحدات الدراسية -->
+    <ul class="menu">
+      <li onclick="showLessons('environment')">البيئة</li>
+      <li onclick="showLessons('biodiversity')">تنوع الكائنات الحية</li>
+      <li onclick="showLessons('resources')">الموارد الطبيعية ومصادر الطاقة</li>
+      <li onclick="showLessons('chemistry')">العناصر والمركبات الكيميائية</li>
+      <li onclick="showLessons('light_sound')">الضوء والصوت</li>
+    </ul>
+  </div>
+
+  <!-- عرض دروس الوحدة المختارة -->
+  <div id="lessons-container" class="pdf-container">
+    <ul class="lesson-list" id="lesson-list"></ul>
+  </div>
+
+  <!-- عرض ملف PDF للدرس -->
+  <div id="pdf-view" class="pdf-container"></div>
+
+  <!-- خانة الاختبار -->
+  <div id="quiz-container" class="quiz-container">
+    <h3>اختبار الدرس الأول – الوحدة الأولى (البيئة)</h3>
+    <p class="muted">أكمل بياناتك أولًا لظهور الاسم في الشهادة.</p>
+
+    <form id="quiz-form">
+      <div class="section-title">أولًا: أسئلة ضع دائرة (اختيار من متعدد)</div>
+
+      <div class="question">
+        <h4>1) الكائن الحي هو:</h4>
+        <div class="options">
+          <label><input type="radio" name="q1" value="أ"> كل ما لا يتنفس ولا ينمو</label>
+          <label><input type="radio" name="q1" value="ب"> كل ما يتنفس وينمو ويتحرك</label>
+          <label><input type="radio" name="q1" value="ج"> كل ما يتكون من ماء وهواء</label>
+          <label><input type="radio" name="q1" value="د"> الصخور والرمال</label>
+        </div>
+      </div>
+
+      <div class="question">
+        <h4>2) المكونات غير الحية هي:</h4>
+        <div class="options">
+          <label><input type="radio" name="q2" value="أ"> الإنسان والنباتات</label>
+          <label><input type="radio" name="q2" value="ب"> البكتيريا والطيور</label>
+          <label><input type="radio" name="q2" value="ج"> الهواء والماء والتربة</label>
+          <label><input type="radio" name="q2" value="د"> الغزال والأسد</label>
+        </div>
+      </div>
+
+      <div class="question">
+        <h4>3) ماذا نسمي وجود الكائنات الحية وغير الحية معًا في مكان واحد؟</h4>
+        <div class="options">
+          <label><input type="radio" name="q3" value="أ"> التنوع الحيوي</label>
+          <label><input type="radio" name="q3" value="ب"> المجتمع الحيوي</label>
+          <label><input type="radio" name="q3" value="ج"> النظام البيئي</label>
+          <label><input type="radio" name="q3" value="د"> الجماعة الحيوية</label>
+        </div>
+      </div>
+
+      <div class="question">
+        <h4>4) أيٌّ مما يلي يمثل علاقة بين الكائنات الحية؟</h4>
+        <div class="options">
+          <label><input type="radio" name="q4" value="أ"> الهواء والتربة</label>
+          <label><input type="radio" name="q4" value="ب"> الأسد والغزال</label>
+          <label><input type="radio" name="q4" value="ج"> الماء والصخر</label>
+          <label><input type="radio" name="q4" value="د"> الورقة والهواء</label>
+        </div>
+      </div>
+
+      <div class="question">
+        <h4>5) الكائنات الحية الدقيقة مثل البكتيريا:</h4>
+        <div class="options">
+          <label><input type="radio" name="q5" value="أ"> يمكن رؤيتها بالعين المجردة</label>
+          <label><input type="radio" name="q5" value="ب"> لا يمكن رؤيتها إلا باستخدام المجهر</label>
+          <label><input type="radio" name="q5" value="ج"> لا تعيش في الطبيعة</label>
+          <label><input type="radio" name="q5" value="د"> لا تُعد كائنات حية</label>
+        </div>
+      </div>
+
+      <div class="question">
+        <h4>6) الجماعة الحيوية هي:</h4>
+        <div class="options">
+          <label><input type="radio" name="q6" value="أ"> مجموعة أفراد النوع نفسه تعيش معًا في نظام بيئي واحد</label>
+          <label><input type="radio" name="q6" value="ب"> مجموعة من المكونات غير الحية فقط</label>
+          <label><input type="radio" name="q6" value="ج"> مجموعة من الأحياء الدقيقة</label>
+          <label><input type="radio" name="q6" value="د"> علاقة بين كائن حي وغير حي</label>
+        </div>
+      </div>
+
+      <div class="question">
+        <h4>7) المجتمع الحيوي يختلف عن الجماعة الحيوية لأنه:</h4>
+        <div class="options">
+          <label><input type="radio" name="q7" value="أ"> يتكون من النوع نفسه من الأفراد</label>
+          <label><input type="radio" name="q7" value="ب"> يتكون من جماعات حيوية متنوعة تعيش معًا</label>
+          <label><input type="radio" name="q7" value="ج"> لا يحتوي على علاقات بين الأحياء</label>
+          <label><input type="radio" name="q7" value="د"> يضم فقط الكائنات غير الحية</label>
+        </div>
+      </div>
+
+      <div class="question">
+        <h4>8) من أمثلة العوامل المؤثرة في التنوع الحيوي:</h4>
+        <div class="options">
+          <label><input type="radio" name="q8" value="أ"> لون السماء</label>
+          <label><input type="radio" name="q8" value="ب"> درجة الحرارة والعلاقات بين الأحياء والأنشطة البشرية</label>
+          <label><input type="radio" name="q8" value="ج"> نوع الورق المستخدم في الدراسة</label>
+          <label><input type="radio" name="q8" value="د"> سرعة دوران الأرض</label>
+        </div>
+      </div>
+
+      <div class="section-title">ثانيًا: أسئلة خارجية كتابية</div>
+      <p class="muted">* تُعرض الإجابة النموذجية بعد التسليم (للمراجعة فقط).</p>
+
+      <div class="question">
+        <h4>س1) اذكر مثالين على علاقة <strong>التعايش</strong> بين الكائنات الحية.</h4>
+        <textarea name="w1" rows="2" style="width:100%"></textarea>
+      </div>
+      <div class="question">
+        <h4>س2) فسر: لماذا يعدّ سطح الورقة نظامًا بيئيًا متكاملًا؟</h4>
+        <textarea name="w2" rows="2" style="width:100%"></textarea>
+      </div>
+      <div class="question">
+        <h4>س3) ما أهمية التنوع الحيوي للكائنات الحية؟</h4>
+        <textarea name="w3" rows="2" style="width:100%"></textarea>
+      </div>
+      <div class="question">
+        <h4>س4) ما أثر الأنشطة البشرية (مثل التلوث والصيد) على التنوع الحيوي؟</h4>
+        <textarea name="w4" rows="2" style="width:100%"></textarea>
+      </div>
+      <div class="question">
+        <h4>س5) اذكر ثلاثة أمثلة على المكونات غير الحية التي قد تجدها في حديقة منزلك.</h4>
+        <textarea name="w5" rows="2" style="width:100%"></textarea>
+      </div>
+      <div class="question">
+        <h4>س6) إذا زاد عدد المفترسات عن عدد الفرائس، ماذا يحدث للنظام البيئي؟ وضّح.</h4>
+        <textarea name="w6" rows="2" style="width:100%"></textarea>
+      </div>
+      <div class="question">
+        <h4>س7) ما الفرق بين الجماعة الحيوية والمجتمع الحيوي؟</h4>
+        <textarea name="w7" rows="2" style="width:100%"></textarea>
+      </div>
+
+      <div class="btn-row no-print">
+        <button type="submit">تسليم الاختبار وتصحيحه</button>
+        <button type="button" class="btn-secondary" onclick="resetQuiz()">مسح الإجابات</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- النتائج والتصدير -->
+  <div id="results-container" class="results-container">
+    <h3>نتيجة اختبار الدرس الأول</h3>
+    <div id="results-summary"></div>
+
+    <!-- بطاقة التقييم والإرشاد -->
+    <div id="eval-card" class="eval-card" style="display:none;">
+      <div class="eval-title">تقييم الطالب:</div>
+      <div id="eval-level"></div>
+      <div class="eval-title" style="margin-top:8px;">توصيات تربوية وعلمية:</div>
+      <ul id="eval-tips" class="rec-list"></ul>
+      <div class="eval-title" style="margin-top:8px;">دروس/صفحات للمراجعة من الكتاب:</div>
+      <ul id="eval-pages" class="rec-list"></ul>
+    </div>
+
+    <div id="results-detail"></div>
+
+    <div class="btn-row no-print" style="margin-top:14px;">
+      <button class="btn-outline" onclick="exportPDF()">تصدير النتيجة إلى PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // الحالة العامة
+  var student = { name:'', grade:'', section:'' };
+
+  // ملف الـPDF
+  var pdfBase = '101.pdf'; // عدّل الاسم عند الحاجة
+
+  // مفتاح أسئلة ضع دائرة
+  var mcqKey = { q1:'ب', q2:'ج', q3:'ج', q4:'ب', q5:'ب', q6:'أ', q7:'ب', q8:'ب' };
+
+  // ربط كل سؤال بمفهوم وصفحات في الـPDF ونصائح علاجية
+  // عدّل الصفحات (page numbers) لتطابق محتوى كتابك
+  var conceptMap = {
+    q1: { concept:'خصائص الكائنات الحية', pages:[3,4], tips:[
+      'التدرّب على تمييز خصائص الحياة: النمو، التغذية، التنفس، الحركة.',
+      'مقارنة بين الكائنات الحية والأشياء غير الحية بصور من الواقع.'
+    ]},
+    q2: { concept:'المكوّنات غير الحية في البيئة', pages:[5,6], tips:[
+      'ربط الهواء والماء والتربة بأمثلة قريبة من بيئة الطالب.',
+      'نشاط منزلي: قياس رطوبة التربة وملاحظة أثرها على نبات صغير.'
+    ]},
+    q3: { concept:'مفهوم النظام البيئي', pages:[7,8], tips:[
+      'رسم مخطط يوضح كائنات حية/غير حية في مكان واحد.',
+      'لعبة تصنيف بطاقات (حي/غير حي) ثم تركيب نظام بيئي بسيط.'
+    ]},
+    q4: { concept:'علاقات بين الكائنات الحية (افتراس/تعايش/تكافل)', pages:[9,10], tips:[
+      'أمثلة سلوكية: الأسد والغزال كافتراس، ونماذج تعايش.',
+      'تمثيل العلاقات بأسهم في مخطط لتثبيت الفهم.'
+    ]},
+    q5: { concept:'الكائنات الدقيقة والمجهر', pages:[11,12], tips:[
+      'التعرّف إلى استخدام المجهر وصور بكتيريا/فطريات.',
+      'نشاط: مقارنة أشياء تُرى بالعين وأخرى لا تُرى إلا بالمجهر.'
+    ]},
+    q6: { concept:'الجماعة الحيوية', pages:[13,14], tips:[
+      'إعطاء أمثلة من الواقع (قطيع غزلان، مستعمرة نمل).',
+      'تمييز الفرق بين جماعة حيوية ومجتمع حيوي بجدول.'
+    ]},
+    q7: { concept:'المجتمع الحيوي مقابل الجماعة الحيوية', pages:[15,16], tips:[
+      'أمثلة لمجتمع يضم جماعات متعددة (غابة: ذئاب/أرانب/طيور...).',
+      'نشاط دمج جماعات حيوية في مجتمع واحد على لوحة.'
+    ]},
+    q8: { concept:'العوامل المؤثرة في التنوع الحيوي', pages:[17,18], tips:[
+      'تحليل تأثير حرارة/ممارسات بشرية على أنواع المنطقة.',
+      'نشاط صفّي: كيف نحدّ من أثر التلوث على التنوع الحيوي؟'
+    ]}
+  };
+
+  // الإجابات النموذجية للكتابي (للمراجعة فقط)
+  var modelAnswers = {
+    w1:'أمثلة: نبات صغير قرب جذور نبات كبير / أسماك تنظيف / طيور تزيل الطفيليات.',
+    w2:'وجود كائنات دقيقة + عناصر غير حية (الورقة/الهواء/الرطوبة) + علاقات (تنفس/غذاء).',
+    w3:'يدعم توازن السلاسل الغذائية واستقرار وبقاء الأحياء.',
+    w4:'يقل التنوع ويختل التوازن البيئي (تناقص/انقراض).',
+    w5:'التربة، الصخور/الحصى، الماء، الهواء، أشعة الشمس.',
+    w6:'تنخفض الفرائس ثم تنخفض المفترسات لاحقًا ويختلّ التوازن.',
+    w7:'الجماعة: أفراد النوع نفسه في نظام واحد. المجتمع: عدة جماعات لأنواع مختلفة تتفاعل معًا.'
+  };
+
+  // أدوات مساعدة
+  function escapeHTML(str){
+    return String(str).replace(/[&<>"']/g, function(m){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]);
+    });
+  }
+  function scrollToEl(el){ window.scrollTo({ top: el.offsetTop - 10, behavior: 'smooth' }); }
+
+  // تقييم عام حسب النسبة
+  function getEvaluation(percent){
+    // مستويات: ممتاز، جيد جدًا، جيد، مقبول، يحتاج دعم
+    if(percent >= 90) return { level:'ممتاز', color:'#0b7a28', msg:'إتقان عالٍ للمفاهيم. استمر على نفس الوتيرة مع تحديات إضافية.' };
+    if(percent >= 80) return { level:'جيد جدًا', color:'#1e8449', msg:'فهم قوي مع حاجة لمراجعة نقاط بسيطة.' };
+    if(percent >= 70) return { level:'جيد', color:'#2e86c1', msg:'مستوى جيد ويحتاج تثبيت المفاهيم الأساسية ببعض التمارين.' };
+    if(percent >= 60) return { level:'مقبول', color:'#b9770e', msg:'مطلوب مراجعة مركّزة على التعريفات والأمثلة.' };
+    return { level:'يحتاج دعم', color:'#c0392b', msg:'نوصي بخطة علاجية قصيرة تتضمن مراجعة المفاهيم وبطاقات تذكّر وأنشطة عملية مبسّطة.' };
+  }
+
+  // فتح الـPDF على صفحة محددة
+  function openPdfAt(page){
+    var pdfView = document.getElementById('pdf-view');
+    document.getElementById('lessons-container').style.display = 'none';
+    document.getElementById('quiz-container').style.display = 'none';
+    document.getElementById('results-container').style.display = 'none';
+    pdfView.innerHTML = '';
+    var ifr = document.createElement('iframe');
+    ifr.src = pdfBase + '#page=' + page;
+    pdfView.appendChild(ifr);
+    pdfView.style.display = 'block';
+    scrollToEl(pdfView);
+  }
+
+  // تسجيل الطالب
+  document.getElementById('student-form').addEventListener('submit', function(event){
+    event.preventDefault();
+    student.name    = document.getElementById('name').value.trim();
+    student.grade   = document.getElementById('grade').value.trim();
+    student.section = document.getElementById('section').value.trim();
+
+    document.getElementById('student-name').innerText    = student.name;
+    document.getElementById('student-grade').innerText   = student.grade;
+    document.getElementById('student-section').innerText = student.section;
+
+    document.querySelector('.form-container').style.display = 'none';
+    document.getElementById('student-info').style.display    = 'block';
+  });
+
+  // عرض الدروس حسب الوحدة
+  function showLessons(unit){
+    var lessonList       = document.getElementById('lesson-list');
+    var lessonsContainer = document.getElementById('lessons-container');
+    var pdfView          = document.getElementById('pdf-view');
+    var quizContainer    = document.getElementById('quiz-container');
+    var resultsContainer = document.getElementById('results-container');
+
+    pdfView.style.display       = 'none';
+    quizContainer.style.display = 'none';
+    resultsContainer.style.display = 'none';
+
+    lessonList.innerHTML = '';
+    lessonsContainer.style.display = 'block';
+
+    if(unit === 'environment'){
+      var li1 = document.createElement('li');
+      li1.innerText = 'الدرس الأول للصف الخامس - الجزء الأول (عرض المحتوى)';
+      li1.onclick = function(){ showPdf(pdfBase); };
+      lessonList.appendChild(li1);
+
+      var li2 = document.createElement('li');
+      li2.innerText = 'اختبار الدرس الأول (تقييم ذاتي + تصدير PDF)';
+      li2.onclick = function(){
+        lessonsContainer.style.display = 'none';
+        pdfView.style.display = 'none';
+        resultsContainer.style.display = 'none';
+        quizContainer.style.display = 'block';
+        scrollToEl(quizContainer);
+      };
+      lessonList.appendChild(li2);
+    } else {
+      var none = document.createElement('li');
+      none.innerText = 'لا توجد دروس مفعّلة في هذه الوحدة حاليًا.';
+      none.style.background = '#eee';
+      lessonList.appendChild(none);
+    }
+  }
+
+  // عرض PDF
+  function showPdf(fileName){
+    var pdfView = document.getElementById('pdf-view');
+    var lessonsContainer = document.getElementById('lessons-container');
+    var quizContainer = document.getElementById('quiz-container');
+    var resultsContainer = document.getElementById('results-container');
+
+    quizContainer.style.display = 'none';
+    resultsContainer.style.display = 'none';
+    lessonsContainer.style.display = 'none';
+
+    pdfView.innerHTML = '';
+    var ifr = document.createElement('iframe');
+    ifr.src = fileName;
+    pdfView.appendChild(ifr);
+    pdfView.style.display = 'block';
+    scrollToEl(pdfView);
+  }
+
+  // تصحيح الاختبار
+  document.getElementById('quiz-form').addEventListener('submit', function(e){
+    e.preventDefault();
+
+    var score = 0;
+    var totalMcq = Object.keys(mcqKey).length;
+    var mcqAnswers = {};
+    for(var q in mcqKey){
+      var checked = document.querySelector('input[name="'+ q +'"]:checked');
+      mcqAnswers[q] = checked ? checked.value : null;
+      if(mcqAnswers[q] === mcqKey[q]) score++;
+    }
+
+    var formData = new FormData(e.target);
+    var writtenKeys = ['w1','w2','w3','w4','w5','w6','w7'];
+    var writtenAnswers = {};
+    for(var i=0;i<writtenKeys.length;i++){
+      var k = writtenKeys[i];
+      writtenAnswers[k] = (formData.get(k) || '').trim();
+    }
+
+    renderResults(score, totalMcq, mcqAnswers, writtenAnswers);
+  });
+
+  function renderResults(score, totalMcq, mcqAnswers, writtenAnswers){
+    var resultsContainer = document.getElementById('results-container');
+    var summary = document.getElementById('results-summary');
+    var detail  = document.getElementById('results-detail');
+    var percent = Math.round((score/totalMcq)*100);
+
+    // الملخص
+    summary.innerHTML =
+      '<div class="answer-block">' +
+        '<p><strong>الطالب/ـة:</strong> ' + escapeHTML(student.name || 'غير مسجّل') + '</p>' +
+        '<p><strong>الصف:</strong> ' + escapeHTML(student.grade || '-') + ' — <strong>الشعبة:</strong> ' + escapeHTML(student.section || '-') + '</p>' +
+        '<p><strong>الدرجة (اختيار من متعدد):</strong> ' + score + ' من ' + totalMcq + ' (<span>' + percent + '%</span>)</p>' +
+        '<p class="muted">* الأسئلة الكتابية للمراجعة فقط ولا تُحتسب في الدرجة تلقائيًا.</p>' +
+      '</div>';
+
+    // تفصيل ضع دائرة
+    var mcqHTML = '<h4 class="section-title">تصحيح أسئلة ضع دائرة</h4>';
+    var i = 1;
+    var wrongConcepts = []; // لتجميع مفاهيم الأسئلة الخاطئة
+    for(var q in mcqKey){
+      var user = mcqAnswers[q];
+      var ok = (user === mcqKey[q]);
+      mcqHTML +=
+        '<div class="answer-block">' +
+          '<div><strong>سؤال ' + i + ')</strong> — ' + (ok ? '<span class="result-ok">إجابة صحيحة</span>' : '<span class="result-bad">إجابة خاطئة</span>') + '</div>' +
+          '<div>إجابتك: <span class="' + (ok ? 'correct' : 'wrong') + '">' + (user !== null ? user : 'غير مُجاب') + '</span></div>' +
+          (ok ? '' : '<div>الإجابة الصحيحة: <span class="correct">' + mcqKey[q] + '</span></div>') +
+          (!ok && conceptMap[q] ? '<div class="muted">المفهوم: ' + conceptMap[q].concept + '</div>' : '') +
+        '</div>';
+      if(!ok && conceptMap[q]) wrongConcepts.push(q);
+      i++;
+    }
+
+    // تفصيل كتابي
+    var writtenHTML = '<h4 class="section-title">مراجعة الأسئلة الكتابية</h4>';
+    var idx = 1;
+    for(var k in modelAnswers){
+      writtenHTML +=
+        '<div class="answer-block">' +
+          '<div><strong>س' + idx + ') إجابتك:</strong> ' + escapeHTML(writtenAnswers[k] || '—') + '</div>' +
+          '<div><strong>الإجابة النموذجية:</strong> ' + escapeHTML(modelAnswers[k]) + '</div>' +
+        '</div>';
+      idx++;
+    }
+
+    detail.innerHTML = mcqHTML + writtenHTML;
+
+    // تقييم عام + توصيات
+    renderEvaluation(percent, wrongConcepts);
+
+    resultsContainer.style.display = 'block';
+    document.getElementById('quiz-container').style.display = 'none';
+    scrollToEl(resultsContainer);
+  }
+
+  function renderEvaluation(percent, wrongQs){
+    var card = document.getElementById('eval-card');
+    var levelEl = document.getElementById('eval-level');
+    var tipsEl  = document.getElementById('eval-tips');
+    var pagesEl = document.getElementById('eval-pages');
+
+    var ev = getEvaluation(percent);
+    levelEl.innerHTML = '<span class="pill" style="border-color:'+ ev.color +'; background: #fff;">' + ev.level + '</span> ' + ev.msg;
+
+    // توصيات عامة بحسب المستوى
+    tipsEl.innerHTML = '';
+    var generalTips = [];
+    if(ev.level === 'ممتاز'){
+      generalTips = [
+        'حل تمارين إضافية من نهاية الدرس لتعميق الفهم.',
+        'تلخيص المفاهيم بكروت مراجعة (Flashcards).'
+      ];
+    } else if(ev.level === 'جيد جدًا'){
+      generalTips = [
+        'مراجعة سريعة للتعريفات الأساسية والأمثلة.',
+        'حل نموذج أسئلة إضافي مركّز على النقاط التي أخطأ فيها.'
+      ];
+    } else if(ev.level === 'جيد'){
+      generalTips = [
+        'إعادة قراءة أمثلة الكتاب لكل مفهوم.',
+        'حل أسئلة قصيرة متدرجة الصعوبة مع تصحيح فوري.'
+      ];
+    } else if(ev.level === 'مقبول'){
+      generalTips = [
+        'جدول مراجعة يومي قصير (10–15 دقيقة) للمفاهيم الأساسية.',
+        'التدرّب على تحديد إن كان الشيء حيًا/غير حي ولماذا.'
+      ];
+    } else {
+      generalTips = [
+        'خطة علاجية: قراءة مبسّطة للمفاهيم + مشاهدة صور/مخططات داعمة.',
+        'نشاط عملي بسيط (مثلاً رعاية نبات صغير) لربط المفهوم بالحياة اليومية.'
+      ];
+    }
+    for(var i=0;i<generalTips.length;i++){
+      var li = document.createElement('li');
+      li.textContent = generalTips[i];
+      tipsEl.appendChild(li);
+    }
+
+    // توصيات من الـPDF حسب المفاهيم الخاطئة
+    pagesEl.innerHTML = '';
+    var seenConcept = {};
+    for(var j=0;j<wrongQs.length;j++){
+      var q = wrongQs[j];
+      var info = conceptMap[q];
+      if(!info) continue;
+      if(seenConcept[info.concept]) continue; // لا نكرر
+      seenConcept[info.concept] = true;
+
+      var li2 = document.createElement('li');
+      var pagesText = 'الصفحات: ' + info.pages.join('، ');
+      var btns = '';
+      for(var p=0;p<info.pages.length;p++){
+        (function(pageNo){
+          var a = document.createElement('a');
+          a.href = 'javascript:void(0)';
+          a.style.marginLeft = '8px';
+          a.textContent = 'فتح ص.' + pageNo;
+          a.onclick = function(){ openPdfAt(pageNo); };
+          li2.appendChild(a);
+        })(info.pages[p]);
+      }
+      var titleSpan = document.createElement('span');
+      titleSpan.innerHTML = escapeHTML(info.concept) + ' — ' + pagesText;
+      li2.insertBefore(titleSpan, li2.firstChild);
+      pagesEl.appendChild(li2);
+
+      // نصائح مفصّلة للمفهوم
+      if(info.tips && info.tips.length){
+        var ulSub = document.createElement('ul');
+        ulSub.className = 'rec-list';
+        for(var t=0;t<info.tips.length;t++){
+          var liSub = document.createElement('li');
+          liSub.textContent = info.tips[t];
+          ulSub.appendChild(liSub);
+        }
+        pagesEl.appendChild(ulSub);
+      }
+    }
+
+    card.style.display = 'block';
+  }
+
+  // مسح
+  function resetQuiz(){
+    document.getElementById('quiz-form').reset();
+    document.getElementById('results-container').style.display = 'none';
+    document.getElementById('eval-card').style.display = 'none';
+  }
+
+  // تصدير النتيجة إلى PDF — يشمل الآن التقييم والتوصيات
+  function exportPDF(){
+    var summary = document.getElementById('results-summary').innerHTML;
+    var evalCard = document.getElementById('eval-card').outerHTML; // بطاقة التقييم كاملة
+    var detail  = document.getElementById('results-detail').innerHTML;
+
+    var html = ''
+      + '<!DOCTYPE html><html lang="ar" dir="rtl"><head>'
+      + '<meta charset="UTF-8"><title>نتيجة اختبار الدرس الأول</title>'
+      + '<style>'
+      + 'body{font-family:Arial,sans-serif;direction:rtl;margin:20px}'
+      + '.header{text-align:center;margin-bottom:16px}'
+      + '.block{background:#fff;border:1px solid #ddd;border-radius:8px;padding:14px;margin-bottom:12px}'
+      + '.section-title{margin:16px 0 8px;font-size:18px;color:#2f6f3e;border-bottom:2px solid #e5f3ea;padding-bottom:6px}'
+      + '.answer-block{background:#f8fbff;border:1px solid #e3eefc;border-radius:8px;padding:10px;margin:8px 0}'
+      + '.correct{color:#0b7a28}.wrong{color:#c0392b}'
+      + '.eval-card{background:#fffdf5;border:1px solid #ffe6a7;border-radius:10px;padding:12px;margin-top:12px}'
+      + '.rec-list{margin:0;padding-right:18px}'
+      + '@page{size:A4;margin:16mm}'
+      + '</style></head><body>'
+      + '<div class="header"><h2>شهادة نتيجة اختبار الدرس الأول</h2><div>الوحدة الأولى: البيئة</div></div>'
+      + '<div class="block">' + summary + '</div>'
+      + '<div class="block">' + evalCard + '</div>'
+      + '<div class="block">' + detail + '</div>'
+      + '<script>window.onload=function(){window.print();}</' + 'script>'
+      + '</body></html>';
+
+    var win = window.open('', '_blank');
+    if (win){
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    } else {
+      alert('يبدو أن حظر النوافذ المنبثقة مفعّل. فضلاً اسمح بالنوافذ المنبثقة ثم أعد المحاولة.');
+    }
+  }
+
+  // إتاحة الدوال لعناصر HTML
+  window.showLessons = showLessons;
+  window.resetQuiz   = resetQuiz;
+  window.exportPDF   = exportPDF;
+  window.openPdfAt   = openPdfAt;
+</script>
+
+</body>
+</html>
